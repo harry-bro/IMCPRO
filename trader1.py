@@ -5,58 +5,58 @@ import numpy as np
 class Trader:
     def __init__(self):
         self.prices = {}  # Store historical prices per product
-        self.window_size = 3e5  # Moving average window for mean reversion
-        self.momentum_window = 1e5  # Lookback for momentum strategy
+        self.window_size = 10  # Moving average window for mean reversion
+        self.momentum_window = 5  # Lookback for momentum strategy
 
     def run(self, state: TradingState):
         result = {}
-        
+
         for product, order_depth in state.order_depths.items():
             orders = []
             best_bid = max(order_depth.buy_orders.keys(), default=None)
             best_ask = min(order_depth.sell_orders.keys(), default=None)
-            
+
             if best_bid is None or best_ask is None:
                 continue
-            
+
             mid_price = (best_bid + best_ask) / 2
-            
+
             # Store price history
             if product not in self.prices:
                 self.prices[product] = []
             self.prices[product].append(mid_price)
-            
+
             # Maintain fixed window size
             if len(self.prices[product]) > self.window_size:
                 self.prices[product].pop(0)
-            
-            # Mean Reversion Strategy
-            if len(self.prices[product]) >= self.window_size:
-                mean_price = np.mean(self.prices[product])
-                std_dev = np.std(self.prices[product])
-                
-                upper_band = mean_price + 1.5 * std_dev
-                lower_band = mean_price - 1.5 * std_dev
 
-                if best_ask < lower_band:
-                    # Buy signal (price too low, expecting reversion)
-                    orders.append(Order(product, best_ask, -order_depth.sell_orders[best_ask]))
-                
-                if best_bid > upper_band:
-                    # Sell signal (price too high, expecting reversion)
-                    orders.append(Order(product, best_bid, -order_depth.buy_orders[best_bid]))
+            # Calculate mean price and deviation
+            mean_price = np.mean(self.prices[product]) if len(self.prices[product]) >= self.window_size else mid_price
+            std_dev = np.std(self.prices[product]) if len(self.prices[product]) >= self.window_size else 1
 
-            # Momentum Strategy
+            acceptable_price = mean_price  # Dynamically calculated instead of fixed 10
+            upper_band = mean_price + 1.5 * std_dev
+            lower_band = mean_price - 1.5 * std_dev
+
+            print(f"Product: {product} | Mean: {mean_price:.2f} | Std Dev: {std_dev:.2f} | Acceptable Price: {acceptable_price:.2f}")
+
+            # Mean Reversion Trading
+            if best_ask < lower_band:
+                print(f"BUY {abs(order_depth.sell_orders[best_ask])} @ {best_ask}")
+                orders.append(Order(product, best_ask, -order_depth.sell_orders[best_ask]))
+
+            if best_bid > upper_band:
+                print(f"SELL {order_depth.buy_orders[best_bid]} @ {best_bid}")
+                orders.append(Order(product, best_bid, -order_depth.buy_orders[best_bid]))
+
+            # Momentum Trading (based on trend)
             if len(self.prices[product]) >= self.momentum_window:
                 recent_trend = self.prices[product][-1] - self.prices[product][-self.momentum_window]
 
                 if recent_trend > 0:  # Uptrend, buy
+                    print(f"MOMENTUM BUY {abs(order_depth.sell_orders[best_ask] // 2)} @ {best_ask}")
                     orders.append(Order(product, best_ask, -order_depth.sell_orders[best_ask] // 2))
                 elif recent_trend < 0:  # Downtrend, sell
+                    print(f"MOMENTUM SELL {order_depth.buy_orders[best_bid] // 2} @ {best_bid}")
                     orders.append(Order(product, best_bid, -order_depth.buy_orders[best_bid] // 2))
             result[product] = orders
-
-        traderData = "Sample"
-        conversions = 1
-
-        return result, conversions, traderData
