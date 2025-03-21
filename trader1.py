@@ -59,9 +59,4 @@ class Trader:
                 elif recent_trend < 0:  # Downtrend, sell
                     print(f"MOMENTUM SELL {order_depth.buy_orders[best_bid] // 2} @ {best_bid}")
                     orders.append(Order(product, best_bid, -order_depth.buy_orders[best_bid] // 2))
-
             result[product] = orders
-
-        traderData = "SAMPLE"
-        conversions = 1
-        return result, conversions, traderData
