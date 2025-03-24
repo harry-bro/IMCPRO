@@ -136,7 +136,10 @@ class Trader:
         for product in state.order_depths:
             order_depth: OrderDepth = state.order_depths[product]
             orders: List[Order] = []
+
             acceptable_price = 10  # Participant should calculate this value
+            volume = 3  #adjust with risk management
+            
             logger.print("Acceptable price : " + str(acceptable_price))
             logger.print("Buy Order depth : " + str(len(order_depth.buy_orders)) + ", Sell order depth : " + str(len(order_depth.sell_orders)))
     
